@@ -3,7 +3,15 @@ version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'war'
+//生成的jar包包名和版本
+war {
+    baseName = 'third-platform'
+    version = ""
+}
 
+
+//设置jdk的版本
+targetCompatibility = 1.8
 sourceCompatibility = 1.8
 
 buildscript {
@@ -11,33 +19,21 @@ buildscript {
         maven {
             url "http://10.10.100.93:8061/nexus/content/groups/ailk/"
         }
+        jcenter()
     }
     dependencies {
         //使用1.4.2.RELEASE版本的Spring框架
         classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.2.RELEASE")
+        classpath 'org.hidetake:gradle-ssh-plugin:2.6.0'
     }
 }
-
 apply plugin: 'java'
 apply plugin: 'spring-boot'
-
-
-
-
-//生成的jar包包名和版本
-war {
-    dependsOn clean
-    baseName = 'web'
-    version = '1.0'
-}
 
 repositories {
     mavenCentral()
 }
 
-//设置jdk的版本
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
 
 //添加编译时的依赖
 dependencies {
@@ -45,53 +41,65 @@ dependencies {
     testCompile('org.springframework.boot:spring-boot-starter-test')
 }
 
-task cleanDocker(type: Delete) {
-    delete fileTree("${buildDir}/docker") {
-        include '**/*'
+apply plugin: 'org.hidetake.ssh'
+
+ssh.settings {
+    knownHosts = allowAnyHosts
+}
+
+remotes {
+    deployServer {
+        host = '47.105.44.101'
+        port = 22
+        user = "minghui"
+        password = "zmhui618"
     }
-}
-task copyBuild(type: Copy, dependsOn: build) {
-    dependsOn cleanDocker
-    from "build/libs/${project.getName()}-${version}.war"
-    into 'build/docker'
-}
-task copyScript(type: Copy, dependsOn: copyBuild) {
-    from project.file("${buildDir}/resources/main/script")
-    into project.file("${buildDir}/docker/script")
-}
-task createDockerFile(type: Dockerfile, dependsOn: copyScript) {
-    from centos
-    maintainer 'test demo'
-    addFile "${project.getName()}-${version}.war", DOCKER_WORK_HOME
-    addFile 'script', "${DOCKER_WORK_HOME}/script"
-    environmentVariable 'JAVA_OPTS' , JAVA_OPTS
-    environmentVariable 'BOOT_TARGET' , "${project.getName()}-${version}.war"
-    runCommand "chmod +x //homeroot/script/*.sh"
-    entryPoint("sh", "-c", "/home/root /script/startup.sh")
 }
 
 
-task buildDockerImage(type: DockerBuildImage, dependsOn: createDockerFile) {
-    inputDir = createDockerFile.destFile.parentFile
-}
-task buildDockerTagImage(type: DockerTagImage, dependsOn: buildDockerImage) {
-    targetImageId {
-        buildDockerImage.imageId
-    }
-    repository = DOCKER_IMAGE
-    conventionMapping.tag = {
-        'latest'
-    }
-    force = true
-}
-task pushImage(type: DockerPushImage, dependsOn: buildDockerTagImage) {
-    conventionMapping.imageName = {
-        buildDockerTagImage.getRepository()
-    }
-    conventionMapping.tag = {
-        buildDockerTagImage.getTag()
+task del(dependsOn:war) << {
+    ssh.run {
+        session(remotes.deployServer) {
+            println 'start deleting...'
+            executeScript '''#!/bin/sh
+                        rm -f /wgy/docker/test_project/third-platform.war
+                    '''
+        }
     }
 }
-artifactoryPublish {
-    dependsOn pushImage
+
+task copy(dependsOn:del) << {
+    ssh.run {
+        session(remotes.deployServer) {
+            println 'start copying war...'
+            put from: buildDir.toString() + '/libs/third-platform.war', into: '/wgy/docker/test_project/'
+//            executeScript '''#!/bin/sh
+//                        rm -f /wgy/docker/test_project/third-platform.war
+//                    '''
+//            mv /wgy/docker/test_project/web-1.0.war /wgy/docker/test_project/third-platform.war
+        }
+    }
 }
+/*
+task stop(dependsOn:copy) << {
+    ssh.run {
+        session(remotes.deployServer) {
+            println 'stop docker...'
+            executeScript '''#!/bin/sh
+                        cd /wgy/docker/test_project
+                        pwd
+                    '''
+        }
+    }
+}
+task deploy(dependsOn:stop) << {
+    ssh.run {
+        session(remotes.deployServer) {
+            println 'start docker...'
+            executeScript '''#!/bin/sh
+                        cd /wgy/docker/test_project
+                        docker-compose up 
+                    '''
+        }
+    }
+}*/
