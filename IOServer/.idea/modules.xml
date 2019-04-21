@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/IOServer.iml" filepath="$PROJECT_DIR$/IOServer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../../4、第四课netty线程模型源码分析(一)/NIONetty/NIONetty.iml" filepath="$PROJECT_DIR$/../../../4、第四课netty线程模型源码分析(一)/NIONetty/NIONetty.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../../3、第三课netty客户端/NettyHello/NettyHello.iml" filepath="$PROJECT_DIR$/../../../3、第三课netty客户端/NettyHello/NettyHello.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../../5、第五课netty线程模型源码分析(二)/nettySource/netty.iml" filepath="$PROJECT_DIR$/../../../5、第五课netty线程模型源码分析(二)/nettySource/netty.iml" />
+    </modules>
+  </component>
+</project>
